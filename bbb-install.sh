@@ -1254,12 +1254,15 @@ install_lti(){
 
   say "Setting/updating LTI credentials for LTI KEY: $LTI_KEY..."
 
-  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:update["$LTI_KEY","$LTI_SECRET"] \
+  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake key:update["$LTI_KEY","$LTI_SECRET"] \
     2> /dev/null 1>&2; then
-    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:keys:add["$LTI_KEY","$LTI_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake key:new["$LTI_KEY","$LTI_SECRET"] \
       2> /dev/null 1>&2 || err "failed to set LTI credentials $LTI_KEY:$LTI_SECRET."
+    # Enable the newly created key (key:enable:by takes [field_name, field_value])
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake key:enable:by["key","$LTI_KEY"] \
+      2> /dev/null 1>&2 || err "failed to enable LTI key $LTI_KEY."
 
-      say "New LTI credentials for LTI KEY: $LTI_KEY were added!"
+      say "New LTI credentials for LTI KEY: $LTI_KEY were added and enabled!"
   else
     say "LTI credentials for LTI KEY: $LTI_KEY were updated!"
   fi
@@ -1451,12 +1454,12 @@ register_lti_tool() {
     err "failed to register $LOG_NAME due to LTI broker not running - retry to resolve."
   fi
 
-  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:show["$APP_NAME"] \
+  if ! docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake apps:show["$APP_NAME"] \
     2> /dev/null 1>&2; then
-    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake apps:add["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully registered."
   else
-    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake db:apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
+    docker compose -f $LTI_DIR/docker-compose.yml exec -T broker bundle exec rake apps:update["$APP_NAME","$CALLBACK_URI","$OAUTH_KEY","$OAUTH_SECRET"] \
       2> /dev/null 1>&2 && say "$LOG_NAME was successfully updated."
   fi
 
